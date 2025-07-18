@@ -1,0 +1,352 @@
+
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Fire Inspection Central - Demo</title>
+<style>
+  body { font-family: Arial, sans-serif; margin: 0; padding: 0; background: #f8f9fa; }
+  header { background: #c00; color: #fff; padding: 1em; text-align: center; font-size: 1.5em; }
+  .container { max-width: 600px; margin: 1em auto; background: #fff; padding: 1.5em 1em; border-radius: 8px; box-shadow: 0 2px 6px #0002; }
+  label { display: block; margin-top: 1em; font-weight: bold; }
+  input, select, textarea {
+    width: 100%; padding: 0.5em; margin-top: 0.3em; border-radius: 4px; border: 1px solid #bbb; box-sizing: border-box;
+  }
+  textarea { resize: vertical; min-height: 60px; }
+  .row { display: flex; gap: 1em; }
+  .row > div { flex: 1; }
+  .btns { margin-top: 1.8em; display: flex; justify-content: space-between; }
+  button {
+    background: #c00; border: none; color: #fff; padding: 0.7em 1.8em; font-size: 1em; border-radius: 6px; cursor: pointer;
+    transition: background 0.2s;
+  }
+  button[disabled] { background: #aaa; cursor: not-allowed; }
+  .hidden { display: none !important; }
+  .system-btns button {
+    width: 100%; margin: 0.4em 0; background: #f1f1f1; color: #c00; border: 1px solid #c00;
+    font-weight: bold; letter-spacing: 1px;
+  }
+  .system-btns button.selected, .opt-btns button.selected {
+    background: #c00 !important; color: #fff !important;
+  }
+  h2 { margin-top: 0.2em; }
+  .opt-btns { display: flex; flex-wrap: wrap; gap: 0.5em; margin: 0.7em 0; }
+  .opt-btns button { flex: 1 0 40%; min-width: 90px; }
+  .notas { margin-top: 1.2em; }
+  .notas label { font-weight: bold; margin-top: 0; }
+</style>
+</head>
+<body>
+<header>FIRE INSPECTION CENTRAL</header>
+<div class="container">
+
+  <!-- PANTALLA 1 -->
+  <div id="pantalla1">
+    <h2>Información Básica</h2>
+    <div class="row">
+      <div>
+        <label>Idioma</label>
+        <select id="lang"><option value="es">Español</option><option value="en">English</option></select>
+      </div>
+      <div>
+        <label>N° de inspección</label>
+        <input id="inspecNum" type="text" readonly value="001" />
+      </div>
+    </div>
+    <label>Nombre de la compañía <input id="company" type="text" /></label>
+    <label>Teléfono <input id="companyTel" type="text" /></label>
+    <label>Licencia C-16 <input id="license" type="text" /></label>
+    <label>Webpage <input id="webpage" type="text" /></label>
+    <label>Email <input id="companyEmail" type="email" /></label>
+    <hr />
+    <label>Nombre del técnico <input id="tech" type="text" /></label>
+    <label>Teléfono del técnico <input id="techTel" type="text" /></label>
+    <label>Email del técnico <input id="techEmail" type="email" /></label>
+    <hr />
+    <label>Nombre del edificio <input id="bldg" type="text" /></label>
+    <label>Dirección completa <input id="address" type="text" /></label>
+    <label>Ciudad, estado, código postal <input id="citystate" type="text" /></label>
+    <label>Contacto en sitio <input id="siteContact" type="text" /></label>
+    <label>Teléfono contacto <input id="siteTel" type="text" /></label>
+    <label>Email contacto <input id="siteEmail" type="email" /></label>
+    <div class="btns"><span></span><button id="btn1" disabled>Siguiente</button></div>
+  </div>
+
+  <!-- PANTALLA 2 -->
+  <div id="pantalla2" class="hidden">
+    <h2>Tipo de Inspección</h2>
+    <div class="system-btns">
+      <button data-system="Sprinklers">Sprinklers</button>
+      <button data-system="Fire Pumps">Fire Pumps</button>
+      <button data-system="Standpipes">Standpipes / Hoses</button>
+      <button data-system="Water Tanks">Water Tanks</button>
+      <button data-system="Hydrants">Hydrants</button>
+    </div>
+    <div class="btns">
+      <button id="back2">Anterior</button>
+      <button id="btn2" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 3 -->
+  <div id="pantalla3" class="hidden">
+    <h2 id="systitle">Sistema</h2>
+    <div id="p3content"></div>
+    <div class="notas">
+      <label>Notas de la inspección</label>
+      <textarea id="notes" placeholder="Observaciones o hallazgos"></textarea>
+    </div>
+    <div class="btns">
+      <button id="back3">Anterior</button>
+      <button id="btn3" disabled>Siguiente</button>
+    </div>
+  </div>
+
+  <!-- PANTALLA 4 (demo final) -->
+  <div id="pantalla4" class="hidden">
+    <h2>¡Inspección lista!</h2>
+    <p>Puedes revisar lo capturado o comenzar una nueva inspección.</p>
+    <pre id="resumen" style="background:#f4f4f4; border-radius:6px; padding:1em;"></pre>
+    <div class="btns">
+      <button onclick="window.location.reload()">Nueva inspección</button>
+    </div>
+  </div>
+
+</div>
+
+<script>
+  // Estados
+  let datos = {};
+  let selectedSystem = "";
+  let selectedOpt1 = "";
+  let selectedOpt2 = "";
+
+  // PANTALLA 1
+  function validaPant1() {
+    const fields = ["company","companyTel","license","companyEmail","tech","techTel","techEmail","bldg","address","citystate","siteContact"];
+    let ok = fields.every(id => document.getElementById(id).value.trim()!=="");
+    document.getElementById("btn1").disabled = !ok;
+  }
+  document.querySelectorAll('#pantalla1 input, #pantalla1 select').forEach(el=>{
+    el.addEventListener('input',validaPant1);
+  });
+
+  // Ir a pantalla 2
+  document.getElementById("btn1").onclick = ()=>{
+    // Guardar datos
+    datos = {
+      idioma: document.getElementById("lang").value,
+      inspecNum: document.getElementById("inspecNum").value,
+      company: document.getElementById("company").value,
+      companyTel: document.getElementById("companyTel").value,
+      license: document.getElementById("license").value,
+      webpage: document.getElementById("webpage").value,
+      companyEmail: document.getElementById("companyEmail").value,
+      tech: document.getElementById("tech").value,
+      techTel: document.getElementById("techTel").value,
+      techEmail: document.getElementById("techEmail").value,
+      bldg: document.getElementById("bldg").value,
+      address: document.getElementById("address").value,
+      citystate: document.getElementById("citystate").value,
+      siteContact: document.getElementById("siteContact").value,
+      siteTel: document.getElementById("siteTel").value,
+      siteEmail: document.getElementById("siteEmail").value
+    };
+    document.getElementById("pantalla1").classList.add("hidden");
+    document.getElementById("pantalla2").classList.remove("hidden");
+  };
+
+  // PANTALLA 2
+  document.querySelectorAll('.system-btns button').forEach(btn=>{
+    btn.onclick=()=>{
+      selectedSystem = btn.dataset.system;
+      document.querySelectorAll('.system-btns button').forEach(b=>b.classList.remove("selected"));
+      btn.classList.add("selected");
+      document.getElementById("btn2").disabled = false;
+    };
+  });
+  document.getElementById("back2").onclick = ()=>{
+    document.getElementById("pantalla2").classList.add("hidden");
+    document.getElementById("pantalla1").classList.remove("hidden");
+  };
+  document.getElementById("btn2").onclick = ()=>{
+    document.getElementById("pantalla2").classList.add("hidden");
+    document.getElementById("pantalla3").classList.remove("hidden");
+    cargaPantalla3();
+  };
+
+  // PANTALLA 3 (dinámica según sistema)
+  function cargaPantalla3() {
+    selectedOpt1 = "";
+    selectedOpt2 = "";
+    document.getElementById("btn3").disabled = true;
+    document.getElementById("notes").value = "";
+    let html = "";
+    document.getElementById("systitle").textContent = selectedSystem;
+    if(selectedSystem==="Sprinklers") {
+      html += `<label>Tipo de sistema</label>
+        <div class="opt-btns" id="opt1">
+          <button>Wet</button><button>Dry</button>
+          <button>Pre-action</button><button>Deluge</button>
+          <button>Antifreeze</button>
+        </div>
+        <label>Frecuencia</label>
+        <select id="opt2" disabled>
+          <option value="">Selecciona...</option>
+          <option value="Weekly">Weekly</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Quarterly">Quarterly</option>
+          <option value="Annual">Annual</option>
+          <option value="5-Year">5-Year</option>
+        </select>`;
+    }
+    else if(selectedSystem==="Fire Pumps") {
+      html += `<label>Tipo de bomba principal</label>
+        <div class="opt-btns" id="opt1">
+          <button>Electric</button>
+          <button>Diesel</button>
+        </div>
+        <label>Configuración</label>
+        <select id="opt2" disabled>
+          <option value="">Selecciona...</option>
+          <option value="Split Case">Split Case</option>
+          <option value="Inline">Inline</option>
+          <option value="Vertical Turbine">Vertical Turbine</option>
+        </select>
+        <label>Frecuencia</label>
+        <select id="opt3" disabled>
+          <option value="">Selecciona...</option>
+          <option value="Weekly">Weekly</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Annual">Annual</option>
+        </select>`;
+    }
+    else if(selectedSystem==="Standpipes / Hoses") {
+      html += `<label>Clase de sistema</label>
+        <div class="opt-btns" id="opt1">
+          <button>Clase I</button>
+          <button>Clase II</button>
+          <button>Clase III</button>
+          <button>Solo Hoses</button>
+        </div>
+        <label>Frecuencia</label>
+        <select id="opt2" disabled>
+          <option value="">Selecciona...</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Annual">Annual</option>
+          <option value="5-Year">5-Year</option>
+        </select>`;
+    }
+    else if(selectedSystem==="Water Tanks") {
+      html += `<label>Frecuencia</label>
+        <select id="opt1">
+          <option value="">Selecciona...</option>
+          <option value="Monthly">Monthly</option>
+          <option value="Annual">Annual</option>
+          <option value="5-Year">5-Year</option>
+        </select>`;
+    }
+    else if(selectedSystem==="Hydrants") {
+      html += `<label>Frecuencia</label>
+        <select id="opt1">
+          <option value="">Selecciona...</option>
+          <option value="Annual">Annual</option>
+          <option value="5-Year">5-Year</option>
+        </select>`;
+    }
+    document.getElementById("p3content").innerHTML = html;
+
+    // Eventos pantalla 3 segun sistema
+    if(selectedSystem==="Sprinklers"||selectedSystem==="Standpipes / Hoses") {
+      // Botones opción 1
+      document.querySelectorAll('#opt1 button').forEach(btn=>{
+        btn.onclick=()=>{
+          selectedOpt1 = btn.textContent;
+          document.querySelectorAll('#opt1 button').forEach(b=>b.classList.remove("selected"));
+          btn.classList.add("selected");
+          document.getElementById("opt2").disabled = false;
+          selectedOpt2 = "";
+          if(document.getElementById("btn3")) document.getElementById("btn3").disabled = true;
+        };
+      });
+      // Selección opción 2
+      document.getElementById("opt2").onchange=()=>{
+        selectedOpt2 = document.getElementById("opt2").value;
+        validaPant3();
+      };
+    }
+    else if(selectedSystem==="Fire Pumps") {
+      // Botones tipo bomba
+      document.querySelectorAll('#opt1 button').forEach(btn=>{
+        btn.onclick=()=>{
+          selectedOpt1 = btn.textContent;
+          document.querySelectorAll('#opt1 button').forEach(b=>b.classList.remove("selected"));
+          btn.classList.add("selected");
+          document.getElementById("opt2").disabled = false;
+          selectedOpt2 = "";
+          if(document.getElementById("btn3")) document.getElementById("btn3").disabled = true;
+        };
+      });
+      // Configuración
+      document.getElementById("opt2").onchange=()=>{
+        selectedOpt2 = document.getElementById("opt2").value;
+        document.getElementById("opt3").disabled = false;
+        selectedOpt3 = "";
+        if(document.getElementById("btn3")) document.getElementById("btn3").disabled = true;
+      };
+      // Frecuencia
+      document.getElementById("opt3").onchange=()=>{
+        selectedOpt3 = document.getElementById("opt3").value;
+        validaPant3();
+      };
+    }
+    else if(selectedSystem==="Water Tanks"||selectedSystem==="Hydrants") {
+      document.getElementById("opt1").onchange=()=>{
+        selectedOpt1 = document.getElementById("opt1").value;
+        validaPant3();
+      };
+    }
+  }
+
+  function validaPant3() {
+    let ok = false;
+    if(selectedSystem==="Sprinklers"||selectedSystem==="Standpipes / Hoses") {
+      ok = selectedOpt1 && selectedOpt2;
+    }
+    else if(selectedSystem==="Fire Pumps") {
+      ok = selectedOpt1 && selectedOpt2 && document.getElementById("opt3").value;
+    }
+    else if(selectedSystem==="Water Tanks"||selectedSystem==="Hydrants") {
+      ok = selectedOpt1;
+    }
+    document.getElementById("btn3").disabled = !ok;
+  }
+
+  document.getElementById("back3").onclick = ()=>{
+    document.getElementById("pantalla3").classList.add("hidden");
+    document.getElementById("pantalla2").classList.remove("hidden");
+  };
+
+  document.getElementById("btn3").onclick = ()=>{
+    // Guardar respuestas
+    datos.system = selectedSystem;
+    datos.opt1 = selectedOpt1;
+    datos.opt2 = (selectedSystem==="Fire Pumps") ? document.getElementById("opt2").value : selectedOpt2;
+    datos.opt3 = (selectedSystem==="Fire Pumps") ? document.getElementById("opt3").value : "";
+    datos.notes = document.getElementById("notes").value;
+    document.getElementById("pantalla3").classList.add("hidden");
+    document.getElementById("pantalla4").classList.remove("hidden");
+    let resumen = `Idioma: ${datos.idioma}\nInspección #: ${datos.inspecNum}\nCompañía: ${datos.company} (${datos.companyEmail})\nTécnico: ${datos.tech} (${datos.techEmail})\nEdificio: ${datos.bldg}\nDirección: ${datos.address}, ${datos.citystate}\nContacto sitio: ${datos.siteContact} (${datos.siteEmail})\nSistema: ${datos.system}\n`;
+    if(datos.system==="Sprinklers"||datos.system==="Standpipes / Hoses")
+      resumen += `Tipo: ${datos.opt1}\nFrecuencia: ${datos.opt2}\n`;
+    else if(datos.system==="Fire Pumps")
+      resumen += `Tipo: ${datos.opt1}\nConfiguración: ${datos.opt2}\nFrecuencia: ${datos.opt3}\n`;
+    else
+      resumen += `Frecuencia: ${datos.opt1}\n`;
+    resumen += `Notas: ${datos.notes}`;
+    document.getElementById("resumen").textContent = resumen;
+  };
+</script>
+</body>
+</html>
